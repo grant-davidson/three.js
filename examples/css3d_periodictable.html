@@ -1,345 +1,417 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<title>three.js css3d - periodic table</title>
-		<meta charset="utf-8" />
-		<meta
-			name="viewport"
-			content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"
-		/>
-		<link type="text/css" rel="stylesheet" href="main.css" />
-		<style>
-			a {
-				color: #8ff;
+
+<head>
+	<title>three.js css3d - periodic table</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+	<link type="text/css" rel="stylesheet" href="main.css" />
+	<style>
+		a {
+			color: #8ff;
+		}
+
+		#menu {
+			position: absolute;
+			bottom: 20px;
+			width: 100%;
+			text-align: center;
+		}
+
+		.level {
+			width: 4000px;
+			height: 2000px;
+		}
+
+		.element {
+			width: 120px;
+			height: 80px;
+			box-shadow: 0px 0px 12px rgba(0, 255, 255, 0.5);
+			border: 1px solid rgba(127, 255, 255, 0.25);
+			font-family: Helvetica, sans-serif;
+			text-align: center;
+			line-height: normal;
+			cursor: default;
+			padding: 2px;
+		}
+
+		.element:hover {
+			box-shadow: 0px 0px 12px rgba(0, 255, 255, 0.75);
+			border: 1px solid rgba(127, 255, 255, 0.75);
+		}
+
+		.element .number {
+			position: absolute;
+			top: 20px;
+			right: 20px;
+			font-size: 12px;
+			color: rgba(127, 255, 255, 0.75);
+		}
+
+		.element .symbol {
+			position: absolute;
+			top: 40px;
+			left: 0px;
+			right: 0px;
+			font-size: 60px;
+			font-weight: bold;
+			color: rgba(255, 255, 255, 0.75);
+			text-shadow: 0 0 10px rgba(0, 255, 255, 0.95);
+		}
+
+		.element .details {
+			position: absolute;
+			top: 5px;
+			left: 0px;
+			right: 0px;
+			font-size: 12px;
+			color: rgba(0, 0, 0, 0.75);
+		}
+
+		button {
+			color: rgba(127, 255, 255, 0.75);
+			background: transparent;
+			outline: 1px solid rgba(127, 255, 255, 0.75);
+			border: 0px;
+			padding: 5px 10px;
+			cursor: pointer;
+		}
+
+		button:hover {
+			background-color: rgba(0, 255, 255, 0.5);
+		}
+
+		button:active {
+			color: #000000;
+			background-color: rgba(0, 255, 255, 0.75);
+		}
+	</style>
+</head>
+
+<body>
+	<div id="info">
+		<a href="http://threejs.org" target="_blank" rel="noopener">three.js</a>
+		css3d - periodic table.
+		<a href="https://plus.google.com/113862800338869870683/posts/QcFk5HrWran" target="_blank"
+			rel="noopener">info</a>.
+	</div>
+	<div id="container"></div>
+	<div id="menu">
+		<button id="table">TABLE</button>
+		<button id="sphere">SPHERE</button>
+		<button id="helix">HELIX</button>
+		<button id="grid">GRID</button>
+	</div>
+
+	<script type="module">
+		import * as THREE from "../build/three.module.js";
+
+		import { TWEEN } from "./jsm/libs/tween.module.min.js";
+		import { TrackballControls } from "./jsm/controls/TrackballControls.js";
+		import {
+			CSS3DRenderer,
+			CSS3DObject
+		} from "./jsm/renderers/CSS3DRenderer.js";
+
+		import { map } from "./js/cpl/wwi.js";
+		//import { map } from "./js/cpl/housing.js";
+		import { mapConvert } from "./js/cpl/mapConvert.js";
+		import { Node } from "./js/cpl/Node.js";
+		console.log("Map", map);
+		const mapSource = mapConvert(map);
+
+		const levelSpacing = 700;
+
+		const getLevelDepth = levelId => {
+			let levelIndex = mapSource.levels.findIndex(
+				level => level.levelId === levelId
+			);
+			if (levelIndex < 0) {
+				levelIndex = 0;
 			}
+			return (
+				(mapSource.levels.length - levelIndex) * levelSpacing -
+				(mapSource.levels.length / 2) * levelSpacing
+			);
+		};
 
-			#menu {
-				position: absolute;
-				bottom: 20px;
-				width: 100%;
-				text-align: center;
-			}
+		const getScenePosition = (position, levelId) => {
+			return {
+				x: position.x - 100,
+				y: position.y - 100,
+				z: getLevelDepth(levelId)
+			};
+		};
 
-			.level {
-				width: 4000px;
-				height: 2000px;
-			}
+		function SVG(o) {
+			var
+				element,
+				value;
 
-			.element {
-				width: 120px;
-				height: 80px;
-				box-shadow: 0px 0px 12px rgba(0, 255, 255, 0.5);
-				border: 1px solid rgba(127, 255, 255, 0.25);
-				font-family: Helvetica, sans-serif;
-				text-align: center;
-				line-height: normal;
-				cursor: default;
-				padding: 2px;
-			}
-
-			.element:hover {
-				box-shadow: 0px 0px 12px rgba(0, 255, 255, 0.75);
-				border: 1px solid rgba(127, 255, 255, 0.75);
-			}
-
-			.element .number {
-				position: absolute;
-				top: 20px;
-				right: 20px;
-				font-size: 12px;
-				color: rgba(127, 255, 255, 0.75);
-			}
-
-			.element .symbol {
-				position: absolute;
-				top: 40px;
-				left: 0px;
-				right: 0px;
-				font-size: 60px;
-				font-weight: bold;
-				color: rgba(255, 255, 255, 0.75);
-				text-shadow: 0 0 10px rgba(0, 255, 255, 0.95);
-			}
-
-			.element .details {
-				position: absolute;
-				top: 5px;
-				left: 0px;
-				right: 0px;
-				font-size: 12px;
-				color: rgba(0, 0, 0, 0.75);
-			}
-
-			button {
-				color: rgba(127, 255, 255, 0.75);
-				background: transparent;
-				outline: 1px solid rgba(127, 255, 255, 0.75);
-				border: 0px;
-				padding: 5px 10px;
-				cursor: pointer;
-			}
-
-			button:hover {
-				background-color: rgba(0, 255, 255, 0.5);
-			}
-
-			button:active {
-				color: #000000;
-				background-color: rgba(0, 255, 255, 0.75);
-			}
-		</style>
-	</head>
-	<body>
-		<div id="info">
-			<a href="http://threejs.org" target="_blank" rel="noopener">three.js</a>
-			css3d - periodic table.
-			<a
-				href="https://plus.google.com/113862800338869870683/posts/QcFk5HrWran"
-				target="_blank"
-				rel="noopener"
-				>info</a
-			>.
-		</div>
-		<div id="container"></div>
-		<div id="menu">
-			<button id="table">TABLE</button>
-			<button id="sphere">SPHERE</button>
-			<button id="helix">HELIX</button>
-			<button id="grid">GRID</button>
-		</div>
-
-		<script type="module">
-			import * as THREE from "../build/three.module.js";
-
-			import { TWEEN } from "./jsm/libs/tween.module.min.js";
-			import { TrackballControls } from "./jsm/controls/TrackballControls.js";
-			import {
-				CSS3DRenderer,
-				CSS3DObject
-			} from "./jsm/renderers/CSS3DRenderer.js";
-
-			import { map } from "./js/cpl/wwi.js";
-			//import { map } from "./js/cpl/housing.js";
-			import { mapConvert } from "./js/cpl/mapConvert.js";
-			import { Node } from "./js/cpl/Node.js";
-			console.log("Map", map);
-			const mapSource = mapConvert(map);
-
-			const levelSpacing = 700;
-
-			const getLevelDepth = levelId => {
-				let levelIndex = mapSource.levels.findIndex(
-					level => level.levelId === levelId
-				);
-				if (levelIndex < 0) {
-					levelIndex = 0;
+			for (var p in o) {
+				value = o[p];
+				switch (p) {
+					case "element": element = document.createElementNS('http://www.w3.org/2000/svg', value);
+						break;
+					default: element.setAttributeNS(null, p, value);
 				}
-				return (
-					(mapSource.levels.length - levelIndex) * levelSpacing -
-					(mapSource.levels.length / 2) * levelSpacing
+			}
+			return element;
+		};
+
+
+		var camera, scene, renderer;
+		var controls;
+
+		var objects = [];
+		var targets = { table: [], sphere: [], helix: [], grid: [] };
+
+		init();
+		animate();
+
+		function createObject3D(position) {
+			var object = new THREE.Object3D();
+			object.position.x = position.x;
+			object.position.y = position.y;
+			object.position.z = position.z;
+			return object;
+		}
+
+
+		function createCSS3Object(element, position) {
+			var object = new CSS3DObject(element);
+			object.position.x = position.x;
+			object.position.y = position.y;
+			object.position.z = position.z;
+			return object;
+		}
+
+		function addToScene(object) {
+			scene.add(object)
+			objects.push(object);
+		}
+
+
+		function init() {
+			camera = new THREE.PerspectiveCamera(
+				40,
+				window.innerWidth / window.innerHeight,
+				1,
+				50000
+			);
+			camera.position.z = 12000;
+
+			scene = new THREE.Scene();
+
+			// table
+
+			const colours = [
+				"#e6194b",
+				"#3cb44b",
+				"#ffe119",
+				"#4363d8",
+				"#f58231",
+				"#911eb4",
+				"#46f0f0",
+				"#f032e6",
+				"#bcf60c",
+				"#fabebe",
+				"#008080",
+				"#e6beff",
+				"#9a6324",
+				"#fffac8",
+				"#800000",
+				"#aaffc3",
+				"#808000",
+				"#ffd8b1",
+				"#000075",
+				"#808080",
+				"#ffffff",
+				"#000000"
+			];
+
+			const maxLevels = Math.min(colours.length, mapSource.levels.length);
+
+			for (let levelIndex = 0; levelIndex < maxLevels; levelIndex += 1) {
+				const levelId = mapSource.levels[levelIndex].levelId;
+				const levelColour = colours[levelIndex];
+
+				const levelZ = getLevelDepth(levelId);
+
+				var levelElement = document.createElement("div");
+				levelElement.className = "level";
+				levelElement.style.backgroundColor = levelColour;
+				levelElement.style.opacity = 0.25;
+
+				var levelObject = createCSS3Object(levelElement, { x: 500, y: 500, z: levelZ });
+				addToScene(levelObject)
+
+				var object = createObject3D({ x: 500, y: 500, z: levelZ })
+				targets.table.push(object);
+
+				const nodes = mapSource.nodes.filter(
+					node => Node.onLevel(node, levelId)  // && Node.isLevelPortal(node)
 				);
-			};
 
-			const getScenePosition = (position, levelId) => {
-				return {
-					x: position.x - 100,
-					y: position.y - 100,
-					z: getLevelDepth(levelId)
-				};
-			};
 
-			var camera, scene, renderer;
-			var controls;
+				// if (nodes.length > 1) {
+				// 	var element = document.createElement("div");
+				// 	const fromNode = nodes[0];
+				// 	const fromPosition = Node.getPosition(fromNode, levelId);
+				// 	const fromScenePosition = getScenePosition(fromPosition, levelId);
+				// 	const toNode = nodes[1];
+				// 	const toPosition = Node.getPosition(toNode, levelId);
+				// 	const toScenePosition = getScenePosition(toPosition, levelId);
 
-			var objects = [];
-			var targets = { table: [], sphere: [], helix: [], grid: [] };
+				// 	let svg = SVG({
+				// 		element: "svg",
+				// 		width: "2000",
+				// 		height: "2000",
+				// 		viewBox: "0 0 2000 2000"
+				// 	});
 
-			init();
-			animate();
+				// 	let rect = SVG({
+				// 		element: "rect",
+				// 		width: "100%",
+				// 		height: "100%",
+				// 		fill: "red"
+				// 	});
 
-			function init() {
-				camera = new THREE.PerspectiveCamera(
-					40,
-					window.innerWidth / window.innerHeight,
-					1,
-					50000
-				);
-				camera.position.z = 12000;
+				// 	svg.appendChild(rect);
 
-				scene = new THREE.Scene();
+				// 	let path = SVG({
+				// 		element: "path",
+				// 		d: `M 0,0 L ${toScenePosition.x - fromScenePosition.x},${toScenePosition.y - fromScenePosition.y} L 1000,1000`,
+				// 		//d: "M50,50 L100,50 L100,100 L50,100"
+				// 	});
 
-				// table
+				// 	let originX = 0;
+				// 	let originY = 0;
 
-				const colours = [
-					"#e6194b",
-					"#3cb44b",
-					"#ffe119",
-					"#4363d8",
-					"#f58231",
-					"#911eb4",
-					"#46f0f0",
-					"#f032e6",
-					"#bcf60c",
-					"#fabebe",
-					"#008080",
-					"#e6beff",
-					"#9a6324",
-					"#fffac8",
-					"#800000",
-					"#aaffc3",
-					"#808000",
-					"#ffd8b1",
-					"#000075",
-					"#808080",
-					"#ffffff",
-					"#000000"
-				];
+				// 	svg.appendChild(path)
+				// 	var position = { x: originX, y: originY, z: fromScenePosition.z };
+				// 	var object = createCSS3Object(svg, position);
+				// 	addToScene(object);
 
-				const maxLevels = Math.min(colours.length, mapSource.levels.length);
+				// 	var object = createObject3D(position)
+				// 	targets.table.push(object);
 
-				for (let levelIndex = 0; levelIndex < maxLevels; levelIndex += 1) {
-					const levelId = mapSource.levels[levelIndex].levelId;
-					const levelColour = colours[levelIndex];
+				// }
 
-					const levelZ = getLevelDepth(levelId);
 
-					var levelElement = document.createElement("div");
-					levelElement.className = "level";
-					levelElement.style.backgroundColor = levelColour;
-					levelElement.style.opacity = 0.25;
-					var levelObject = new CSS3DObject(levelElement);
-					levelObject.position.x = 500;
-					levelObject.position.y = 500;
-					levelObject.position.z = levelZ;
-					scene.add(levelObject);
 
-					objects.push(levelObject);
+				for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex += 1) {
+					const node = nodes[nodeIndex];
+					const position = Node.getPosition(node, levelId);
+					const scenePosition = getScenePosition(position, levelId);
+
+					var element = document.createElement("div");
+					element.className = "element";
+					element.style.backgroundColor = levelColour;
+
+					var details = document.createElement("div");
+					details.className = "details";
+					details.innerHTML = node.title;
+					element.appendChild(details);
+
+					var object = new CSS3DObject(element);
+					object.position.x = scenePosition.x;
+					object.position.y = scenePosition.y;
+					object.position.z = scenePosition.z;
+					scene.add(object);
+
+					objects.push(object);
 
 					//
 
 					var object = new THREE.Object3D();
-					object.position.x = 500;
-					object.position.y = 500;
-					object.position.z = levelZ;
+					object.position.x = scenePosition.x;
+					object.position.y = scenePosition.y;
+					object.position.z = scenePosition.z;
 
 					targets.table.push(object);
-
-					const nodes = mapSource.nodes.filter(
-						node => Node.onLevel(node, levelId)  // && Node.isLevelPortal(node)
-					);
-
-					for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex += 1) {
-						const node = nodes[nodeIndex];
-						const position = Node.getPosition(node, levelId);
-						const scenePosition = getScenePosition(position, levelId);
-
-						var element = document.createElement("div");
-						element.className = "element";
-						element.style.backgroundColor = levelColour;
-						//"rgba(0,127,127," + (Math.random() * 0.5 + 0.25) + ")";
-
-						var details = document.createElement("div");
-						details.className = "details";
-						details.innerHTML = node.title;
-						element.appendChild(details);
-
-						var object = new CSS3DObject(element);
-						object.position.x = scenePosition.x;
-						object.position.y = scenePosition.y;
-						object.position.z = scenePosition.z;
-						scene.add(object);
-
-						objects.push(object);
-
-						//
-
-						var object = new THREE.Object3D();
-						object.position.x = scenePosition.x;
-						object.position.y = scenePosition.y;
-						object.position.z = scenePosition.z;
-
-						targets.table.push(object);
-					}
 				}
-
-				//
-
-				renderer = new CSS3DRenderer();
-				renderer.setSize(window.innerWidth, window.innerHeight);
-				document.getElementById("container").appendChild(renderer.domElement);
-
-				//
-
-				controls = new TrackballControls(camera, renderer.domElement);
-				controls.minDistance = 50;
-				controls.maxDistance = 15000;
-				controls.addEventListener("change", render);
-
-				transform(targets.table, 2000);
-
-				//
-
-				window.addEventListener("resize", onWindowResize, false);
 			}
 
-			function transform(targets, duration) {
-				TWEEN.removeAll();
+			//
 
-				for (var i = 0; i < objects.length; i++) {
-					var object = objects[i];
-					var target = targets[i];
+			renderer = new CSS3DRenderer();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			document.getElementById("container").appendChild(renderer.domElement);
 
-					new TWEEN.Tween(object.position)
-						.to(
-							{
-								x: target.position.x,
-								y: target.position.y,
-								z: target.position.z
-							},
-							Math.random() * duration + duration
-						)
-						.easing(TWEEN.Easing.Exponential.InOut)
-						.start();
+			//
 
-					new TWEEN.Tween(object.rotation)
-						.to(
-							{
-								x: target.rotation.x,
-								y: target.rotation.y,
-								z: target.rotation.z
-							},
-							Math.random() * duration + duration
-						)
-						.easing(TWEEN.Easing.Exponential.InOut)
-						.start();
-				}
+			controls = new TrackballControls(camera, renderer.domElement);
+			controls.minDistance = 50;
+			controls.maxDistance = 15000;
+			controls.addEventListener("change", render);
 
-				new TWEEN.Tween(this)
-					.to({}, duration * 2)
-					.onUpdate(render)
+			transform(targets.table, 2000);
+
+			//
+
+			window.addEventListener("resize", onWindowResize, false);
+		}
+
+		function transform(targets, duration) {
+			TWEEN.removeAll();
+
+			for (var i = 0; i < objects.length; i++) {
+				var object = objects[i];
+				var target = targets[i];
+
+				new TWEEN.Tween(object.position)
+					.to(
+						{
+							x: target.position.x,
+							y: target.position.y,
+							z: target.position.z
+						},
+						Math.random() * duration + duration
+					)
+					.easing(TWEEN.Easing.Exponential.InOut)
+					.start();
+
+				new TWEEN.Tween(object.rotation)
+					.to(
+						{
+							x: target.rotation.x,
+							y: target.rotation.y,
+							z: target.rotation.z
+						},
+						Math.random() * duration + duration
+					)
+					.easing(TWEEN.Easing.Exponential.InOut)
 					.start();
 			}
 
-			function onWindowResize() {
-				camera.aspect = window.innerWidth / window.innerHeight;
-				camera.updateProjectionMatrix();
+			new TWEEN.Tween(this)
+				.to({}, duration * 2)
+				.onUpdate(render)
+				.start();
+		}
 
-				renderer.setSize(window.innerWidth, window.innerHeight);
+		function onWindowResize() {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
 
-				render();
-			}
+			renderer.setSize(window.innerWidth, window.innerHeight);
 
-			function animate() {
-				requestAnimationFrame(animate);
+			render();
+		}
 
-				TWEEN.update();
+		function animate() {
+			requestAnimationFrame(animate);
 
-				controls.update();
-			}
+			TWEEN.update();
 
-			function render() {
-				renderer.render(scene, camera);
-			}
-		</script>
-	</body>
+			controls.update();
+		}
+
+		function render() {
+			renderer.render(scene, camera);
+		}
+	</script>
+</body>
+
 </html>
