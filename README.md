@@ -1,3 +1,6 @@
+Run serve from the root directory and browse to examples
+The periodic table example is the one that show Ako Maps
+
 three.js
 ========
 
@@ -89,3 +92,5 @@ If everything went well you should see [this](https://jsfiddle.net/f2Lommf5/).
 [dev-dependencies-url]: https://david-dm.org/mrdoob/three.js#info=devDependencies
 [lgtm]: https://img.shields.io/lgtm/grade/javascript/g/mrdoob/three.js.svg?label=code%20quality
 [lgtm-url]: https://lgtm.com/projects/g/mrdoob/three.js/
+
+
